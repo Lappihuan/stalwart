@@ -32,6 +32,9 @@ members = [
     "tests",
 ]
 
+[patch.crates-io]
+dns-update = { git = "https://github.com/Lappihuan/dns-update", rev = "d80c194bc322dc94be3be3309c08e85f3c11d8d0" }
+
 [workspace.lints.clippy]
 result_unit_err = "allow"
 
