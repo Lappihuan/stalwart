@@ -1341,6 +1341,7 @@ impl EnumImpl for Property {
             b"zone" => Property::Zone,
             b"zoneIpV4" => Property::ZoneIpV4,
             b"zoneIpV6" => Property::ZoneIpV6,
+            b"serverId" => Property::ServerId,
         }
     }
 
@@ -2280,6 +2281,7 @@ impl EnumImpl for Property {
             Property::Zone => "zone",
             Property::ZoneIpV4 => "zoneIpV4",
             Property::ZoneIpV6 => "zoneIpV6",
+            Property::ServerId => "serverId",
         }
     }
 
@@ -3223,11 +3225,12 @@ impl EnumImpl for Property {
             749 => Some(Property::Zone),
             98 => Some(Property::ZoneIpV4),
             99 => Some(Property::ZoneIpV6),
+            934 => Some(Property::ServerId),
             _ => None,
         }
     }
 
-    const COUNT: usize = 934;
+    const COUNT: usize = 935;
 }
 
 impl serde::Serialize for Property {
@@ -4493,6 +4496,7 @@ impl ObjectInner {
             ObjectInner::DnsServer(DnsServer::Vultr(obj)) => obj.member_tenant_id,
             ObjectInner::DnsServer(DnsServer::WebSupport(obj)) => obj.member_tenant_id,
             ObjectInner::DnsServer(DnsServer::YandexCloud(obj)) => obj.member_tenant_id,
+            ObjectInner::DnsServer(DnsServer::PowerDns(obj)) => obj.member_tenant_id,
             ObjectInner::Domain(obj) => obj.member_tenant_id,
             ObjectInner::MailingList(obj) => obj.member_tenant_id,
             ObjectInner::OAuthClient(obj) => obj.member_tenant_id,
@@ -4595,6 +4599,7 @@ impl ObjectInner {
             ObjectInner::DnsServer(DnsServer::Vultr(obj)) => obj.member_tenant_id = Some(id),
             ObjectInner::DnsServer(DnsServer::WebSupport(obj)) => obj.member_tenant_id = Some(id),
             ObjectInner::DnsServer(DnsServer::YandexCloud(obj)) => obj.member_tenant_id = Some(id),
+            ObjectInner::DnsServer(DnsServer::PowerDns(obj)) => obj.member_tenant_id = Some(id),
             ObjectInner::Domain(obj) => obj.member_tenant_id = Some(id),
             ObjectInner::MailingList(obj) => obj.member_tenant_id = Some(id),
             ObjectInner::OAuthClient(obj) => obj.member_tenant_id = Some(id),

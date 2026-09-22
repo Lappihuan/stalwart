@@ -1110,6 +1110,20 @@ impl DnsUpdater {
                         .map_err(|err| format!("Failed to build DNS updater: {}", err))?,
                 })
             }
+            DnsServer::PowerDns(server) => Ok(DnsUpdater {
+                polling_interval: server.polling_interval.into_inner(),
+                propagation_timeout: server.propagation_timeout.into_inner(),
+                propagation_delay: server.propagation_delay.map(|d| d.into_inner()),
+                ttl: server.ttl.into_inner(),
+                core,
+                updater: dns_update::DnsUpdater::new_pdns(
+                    server.api_key.secret().await?,
+                    Some(server.endpoint.as_str()),
+                    Some(server.server_id.as_str()),
+                    Some(server.timeout.into_inner()),
+                )
+                .map_err(|err| format!("Failed to build DNS updater: {}", err))?,
+            }),
             DnsServer::Deprecated1 => Err("DNS server type no longer supported".to_string()),
         }
     }

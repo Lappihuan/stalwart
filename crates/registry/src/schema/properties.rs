@@ -1188,4 +1188,5 @@ pub enum Property {
     Zone = 749,
     ZoneIpV4 = 98,
     ZoneIpV6 = 99,
+    ServerId = 934,
 }
