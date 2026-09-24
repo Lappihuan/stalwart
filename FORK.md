@@ -9,28 +9,24 @@ credentials outside this repository. The maintained branch is
 deliberately before rollout; this fork does not require upgrading an existing
 deployment immediately.
 
-## Patch and dependency ownership
+## Remaining fork changes
 
-Keep the PowerDNS provider in the `Lappihuan/dns-update` fork and the server
-integration in this repository. The dependency revision is
-`d80c194bc322dc94be3be3309c08e85f3c11d8d0`: the PowerDNS change from upstream
-PR #85 combined with upstream `dns-update` 0.5.8. Both `main` (the PR source)
-and `powerdns-0.5` point to this tested source tree at the initial integration.
+Only the Stalwart fork needs maintenance. The PowerDNS provider was merged in
+[upstream dns-update PR #85](https://github.com/stalwartlabs/dns-update/pull/85).
+The workspace now pins `https://github.com/stalwartlabs/dns-update` at
+`9cd35e9d5724459806e12a6cb5cb5a9262532555`, the merged commit. Its source tree is
+identical to the previously tested library fork. A separate `dns-update` fork
+or synchronized maintenance branch is no longer part of the build workflow.
 
-Make provider changes on `dns-update`'s `main` so the upstream PR includes the
-code used by this fork. Merge selected upstream library updates into that
-branch, run the provider tests, and publish it before updating Stalwart's full
-revision pin and lockfile. If keeping `powerdns-0.5` as a convenience reference,
-fast-forward it to the tested PR branch; avoid independent development there.
-This keeps one source of truth for provider fixes while Stalwart builds remain
-pinned to a reviewed commit.
+As checked on 2026-09-24, the published `dns-update` 0.5.8 crate does not contain
+PowerDNS, although the merged Git commit still carries that version number.
+Keep the workspace `[patch.crates-io]` override and full revision pin until a
+compatible crate release includes the provider. Commit dependency changes with
+their updated `Cargo.lock`; avoid a moving branch reference.
 
-Stalwart must depend on a full, immutable Git revision of a compatible
-`dns-update` version. Commit the dependency declaration
-and its updated `Cargo.lock` together; the lockfile records the exact source
-revision and transitive dependencies. Do not replace the revision with `main` or
-an unpinned pull-request ref. A dependency update is a reviewed fork change,
-separate from an upstream Stalwart update.
+This Stalwart fork still supplies the provider settings, registry persistence,
+bootstrap mapping, and WebUI schema, plus the local container build workflow.
+Those server changes remain necessary with upstream Stalwart v0.16.23.
 
 The root `Dockerfile` builds the checked-out source, including the pinned
 dependency. Its builder and Debian runtime images are pinned by verified
@@ -77,7 +73,9 @@ or reuse an image tag for a different build.
 
 ## Validate and publish
 
-Run the provider tests in the `dns-update` checkout selected by the revision pin:
+For a library update, run the provider tests in an upstream `dns-update`
+checkout at the selected revision. This checkout is only needed for library
+testing; Stalwart and Docker fetch the pinned dependency themselves:
 
 ```sh
 cargo test --lib pdns_tests
@@ -153,9 +151,13 @@ not update the pinned base images.
 
 ## Return to upstream
 
-Switch back only when an upstream release contains both the PowerDNS provider
-and its Stalwart integration, including the configuration/UI support you use.
-The release number alone is not enough. Compare final upstream provider names,
+When a compatible `dns-update` crate containing PowerDNS is published, remove
+its workspace `[patch.crates-io]` override, update `Cargo.lock` to that release,
+and rerun the integration checks. The Stalwart configuration changes are still
+needed at this stage.
+
+Switch to an official Stalwart image once its release includes the library and
+the server configuration/UI integration. Compare final upstream provider names,
 field names, defaults, and behavior with this fork and migrate stored provider
 configuration if needed. Test ACME renewal and managed records with the official
 image in staging, follow the upstream data upgrade instructions, then deploy an
