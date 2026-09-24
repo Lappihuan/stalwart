@@ -2,10 +2,6 @@
 FROM --platform=$BUILDPLATFORM docker.io/lukemathwalker/cargo-chef:latest-rust-slim-trixie@sha256:38dfdbf4fda95c516f873f33032e490baa988b75f7d83c7d12f788f770785b36 AS chef
 WORKDIR /build
 
-FROM --platform=$BUILDPLATFORM chef AS planner
-COPY . .
-RUN cargo chef prepare --recipe-path /recipe.json
-
 FROM --platform=$BUILDPLATFORM chef AS builder
 ARG TARGETPLATFORM
 RUN case "${TARGETPLATFORM}" in \
@@ -19,12 +15,15 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     g++-aarch64-linux-gnu binutils-aarch64-linux-gnu \
     g++-x86-64-linux-gnu binutils-x86-64-linux-gnu
 RUN rustup target add "$(cat /target.txt)"
-COPY --from=planner /recipe.json /recipe.json
 ARG CARGO_BUILD_JOBS=2
-RUN RUSTFLAGS="$(cat /flags.txt)" cargo chef cook --locked --jobs "$CARGO_BUILD_JOBS" --target "$(cat /target.txt)" --release --no-default-features --features "sqlite postgres mysql rocks s3 redis azure nats enterprise" --recipe-path /recipe.json
 COPY . .
-RUN RUSTFLAGS="$(cat /flags.txt)" cargo build --locked --jobs "$CARGO_BUILD_JOBS" --target "$(cat /target.txt)" --release -p stalwart --no-default-features --features "sqlite postgres mysql rocks s3 redis azure nats enterprise"
-RUN mv "/build/target/$(cat /target.txt)/release" "/output"
+# Cache compilation without rewriting workspace manifests or the reviewed lockfile.
+# Copy the finished binary out of the target cache before this RUN ends.
+RUN --mount=type=cache,id=stalwart-powerdns-registry,target=/usr/local/cargo/registry,sharing=locked \
+    --mount=type=cache,id=stalwart-powerdns-git,target=/usr/local/cargo/git,sharing=locked \
+    --mount=type=cache,id=stalwart-powerdns-target,target=/build/target,sharing=locked \
+    RUSTFLAGS="$(cat /flags.txt)" cargo build --locked --jobs "$CARGO_BUILD_JOBS" --target "$(cat /target.txt)" --release -p stalwart --no-default-features --features "sqlite postgres mysql rocks s3 redis azure nats enterprise" && \
+    install -Dm755 "/build/target/$(cat /target.txt)/release/stalwart" /output/stalwart
 
 FROM docker.io/debian:trixie-slim@sha256:a99cfc517144bc59b1978475ec53b46ecabec7e43635402ee5b77cc54cd1b20a
 RUN export DEBIAN_FRONTEND=noninteractive && \

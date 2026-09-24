@@ -31,8 +31,11 @@ Those server changes remain necessary with upstream Stalwart v0.16.23.
 The root `Dockerfile` builds the checked-out source, including the pinned
 dependency. Its builder and Debian runtime images are pinned by verified
 multiarch manifest digests; the builder digest also fixes its bundled Rust
-toolchain (Rust/Cargo 1.98.1 and cargo-chef 0.1.78 at the initial pin). Cargo uses
-`--locked` in both dependency and application builds.
+toolchain (Rust/Cargo 1.98.1 at the initial pin). Cargo builds the actual source
+with `--locked`, using the reviewed manifests and lockfile directly. BuildKit
+cache mounts retain downloaded crates, Git dependencies, and compilation output
+between builds. The finished binary is copied out of the compilation cache into
+the image in the same build step.
 Debian packages still come from live apt repositories, so a rebuilt image is not
 promised to be byte-for-byte identical. Preserve the published image by digest.
 
@@ -64,7 +67,7 @@ runtime emulation for the final image stage, or a native local build machine.
 Use `--allow-dirty` only for development: resulting image tags and revision
 labels have a `-dirty` suffix. `--help` lists repository and tag overrides.
 
-Both the dependency and application builds default to two parallel Cargo jobs.
+The build defaults to two parallel Cargo jobs.
 Set `--jobs 1` to reduce concurrency or choose a larger positive integer for a
 build machine with more available memory. `CARGO_BUILD_JOBS` provides the same
 default through the environment; `--jobs` takes precedence. The script passes
