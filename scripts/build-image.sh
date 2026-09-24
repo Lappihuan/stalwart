@@ -11,10 +11,12 @@ Usage: scripts/build-image.sh [options]
   --image REPO       Required registry/repository, or set IMAGE_REPOSITORY
   --platform ARCH    linux/amd64 (default) or linux/arm64; one architecture per build
   --context NAME     Local Docker socket context (default: default)
+  --jobs COUNT       Parallel Cargo build jobs (default: 2; positive integer)
   --allow-dirty      Development build; appends -dirty to the tag and revision
   -h, --help         Show this help
 
 Environment defaults: IMAGE_REPOSITORY, IMAGE_TAG, PLATFORM, LOCAL_DOCKER_CONTEXT.
+CARGO_BUILD_JOBS sets the default for --jobs.
 The context's own builder is used, regardless of the selected Buildx builder.
 Release builds require a clean worktree. See FORK.md for staging and publishing.
 EOF
@@ -29,17 +31,19 @@ image_repository=${IMAGE_REPOSITORY:-}
 image_tag=${IMAGE_TAG:-}
 platform=${PLATFORM:-linux/amd64}
 docker_context=${LOCAL_DOCKER_CONTEXT:-default}
+build_jobs=${CARGO_BUILD_JOBS:-2}
 allow_dirty=false
 
 while (($#)); do
     case "$1" in
-        --tag|--image|--platform|--context)
+        --tag|--image|--platform|--context|--jobs)
             (($# >= 2)) && [[ -n $2 ]] || fail "$1 requires a value"
             case "$1" in
                 --tag) image_tag=$2 ;;
                 --image) image_repository=$2 ;;
                 --platform) platform=$2 ;;
                 --context) docker_context=$2 ;;
+                --jobs) build_jobs=$2 ;;
             esac
             shift 2
             ;;
@@ -48,6 +52,8 @@ while (($#)); do
         *) fail "unknown option: $1 (see --help)" ;;
     esac
 done
+
+[[ $build_jobs =~ ^[1-9][0-9]*$ ]] || fail "--jobs or CARGO_BUILD_JOBS must be a positive integer"
 
 [[ -n $image_repository ]] || fail "provide --image REGISTRY/REPOSITORY or set IMAGE_REPOSITORY"
 [[ $image_repository == */* && $image_repository != *@* && $image_repository != *://* ]] \
@@ -90,12 +96,13 @@ esac
 
 image="$image_repository:$image_tag"
 lock_hash=$(git hash-object Cargo.lock)
-printf 'Building %s for %s on local context %s\n' "$image" "$platform" "$docker_context"
+printf 'Building %s for %s on local context %s with %s Cargo jobs\n' "$image" "$platform" "$docker_context" "$build_jobs"
 docker --context "$docker_context" buildx build \
     --builder "$docker_context" \
     --platform "$platform" \
     --load \
     --file Dockerfile \
+    --build-arg "CARGO_BUILD_JOBS=$build_jobs" \
     --label org.opencontainers.image.source=https://github.com/Lappihuan/stalwart \
     --label "org.opencontainers.image.revision=$revision" \
     --label "org.opencontainers.image.version=$image_tag" \

@@ -64,6 +64,14 @@ runtime emulation for the final image stage, or a native local build machine.
 Use `--allow-dirty` only for development: resulting image tags and revision
 labels have a `-dirty` suffix. `--help` lists repository and tag overrides.
 
+Both the dependency and application builds default to two parallel Cargo jobs.
+Set `--jobs 1` to reduce concurrency or choose a larger positive integer for a
+build machine with more available memory. `CARGO_BUILD_JOBS` provides the same
+default through the environment; `--jobs` takes precedence. The script passes
+this value into Docker as a build argument. A direct Docker build can use
+`--build-arg CARGO_BUILD_JOBS=2`. This limits parallel compilations, not the
+memory used by an individual compilation or the final release link.
+
 For every release, record the upstream tag, fork commit, full `dns-update`
 revision from `Cargo.lock`, target architecture, image tag, and the pushed image
 digest in your deployment/release record. The image also contains labels for
